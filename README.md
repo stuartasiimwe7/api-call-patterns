@@ -1,7 +1,5 @@
 # API Call Patterns
 
-Reproducible experiments for *Temporal Analysis of API Call Patterns for Early Detection of Malicious Behaviour*.
-
 The study tests how accurately malicious Windows behaviour can be identified from the first 5, 10, 20, 40, 60, 80, or 100 API calls. It compares a call-frequency baseline with an order-aware unigram-bigram model.
 
 ## Results
@@ -39,7 +37,7 @@ See [`data/README.md`](data/README.md) for details.
 ```bash
 python -m venv .venv
 .venv/bin/pip install -r requirements.txt
-.venv/bin/python src/run_experiment.py
+.venv/bin/python main.py
 ```
 
 Generated figures, tables, predictions, and fitted models are written to `results/`.
@@ -51,7 +49,8 @@ data/               Dataset instructions and local source data
 results/figures/    Evaluation figures
 results/models/     Fitted models for each call budget
 results/tables/     Metrics, predictions, and audit records
-src/                Experiment code
+main.py             Experiment entry point
+src/                Data, features, models, evaluation, policy, and plotting
 ```
 
 ## Citation

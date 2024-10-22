@@ -3,10 +3,9 @@ message: "If you use this manuscript, code, or results, please cite it as below.
 title: "Temporal Analysis of API Call Patterns for Early Detection of Malicious Behaviour"
 type: software
 authors:
-  - family-names: Asiimwe
-    given-names: Stuart
+  - name: Stuart Asiimwe
 date-released: 2024-10-22
-abstract: "A reproducible evaluation of early malware detection from partial Windows API-call sequences."
+abstract: "An evaluation of early malware detection from partial Windows API-call sequences."
 keywords:
   - malware detection
   - API-call sequences
