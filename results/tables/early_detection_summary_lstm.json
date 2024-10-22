@@ -1,0 +1,28 @@
+{
+  "policy": "1 consecutive positive checkpoint(s)",
+  "checkpoints": [
+    5,
+    10,
+    20,
+    40,
+    60,
+    80,
+    100
+  ],
+  "validation_selected_per_checkpoint_fpr_limit": 0.02,
+  "validation_malware_coverage": 0.846927966101695,
+  "validation_benign_false_alarm_rate": 0.04395604395604396,
+  "validation_median_calls_to_detection": 20.0,
+  "thresholds": {
+    "5": 0.9531711935997009,
+    "10": 1.0,
+    "20": 0.9650934934616089,
+    "40": 0.9471481442451477,
+    "60": 0.7879508137702942,
+    "80": 0.9830268025398254,
+    "100": 0.9803892970085144
+  },
+  "malware_detection_coverage_by_100": 0.8638049814520403,
+  "benign_false_alarm_rate_by_100": 0.16304347826086957,
+  "median_calls_to_detection_among_detected_malware": 20.0
+}

@@ -1,6 +1,9 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
+
 numpy==2.3.3
 pandas==2.3.2
 scikit-learn==1.7.2
 matplotlib==3.10.6
 seaborn==0.13.2
 joblib==1.5.2
+torch==2.5.1+cpu

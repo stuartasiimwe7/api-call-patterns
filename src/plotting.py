@@ -23,7 +23,11 @@ def save_figures(
     audit: dict,
 ):
     sns.set_theme(style="whitegrid", context="paper", font_scale=1.15)
-    palette = {"Frequency": "#64748b", "Order-aware 1-2 gram": "#0f8ebd"}
+    palette = {
+        "Frequency": "#64748b",
+        "Order-aware 1-2 gram": "#0f8ebd",
+        "LSTM": "#7c3aed",
+    }
 
     fig, axes = plt.subplots(1, 2, figsize=(11, 4.2), constrained_layout=True)
     for model_name, group in results.groupby("model"):

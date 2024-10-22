@@ -1,6 +1,12 @@
 # API Call Patterns
 
-The study tests how accurately malicious Windows behaviour can be identified from the first 5, 10, 20, 40, 60, 80, or 100 API calls. It compares a call-frequency baseline with an order-aware unigram-bigram model.
+The study tests how early malicious Windows behaviour can be detected from the first 5, 10, 20, 40, 60, 80, or 100 API calls. It asks:
+
+1. How does detection quality change as the observed prefix grows?
+2. Does local call order improve on call-frequency features?
+3. How early can a sequential policy alert while controlling benign false alarms?
+
+Call-frequency, local-order, and recurrent representations are compared to answer these questions.
 
 ## Results
 
@@ -9,6 +15,7 @@ The study tests how accurately malicious Windows behaviour can be identified fro
 - 0.904 balanced accuracy after 80 calls
 - 83.6% malware detection by 100 calls with a 5.4% benign false-alarm rate
 - Median alert at 60 calls among detected malware
+- Longer-range sequence modelling did not improve performance consistently and produced a higher sequential false-alarm rate
 
 Hyperparameters and alert thresholds are selected on the validation set. The test set is reserved for final evaluation.
 
@@ -35,7 +42,7 @@ See [`data/README.md`](data/README.md) for details.
 ## Run
 
 ```bash
-python -m venv .venv
+python3.12 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 .venv/bin/python main.py
 ```

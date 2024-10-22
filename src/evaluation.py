@@ -96,3 +96,84 @@ def bootstrap_intervals(
         intervals[f"{name}_ci_low"] = float(low)
         intervals[f"{name}_ci_high"] = float(high)
     return intervals
+
+
+def paired_bootstrap_differences(
+    y_true: np.ndarray,
+    candidate_probability: np.ndarray,
+    candidate_threshold: float,
+    reference_probability: np.ndarray,
+    reference_threshold: float,
+    *,
+    seed: int,
+) -> dict[str, float]:
+    candidate_prediction = (
+        candidate_probability >= candidate_threshold
+    ).astype(np.int8)
+    reference_prediction = (
+        reference_probability >= reference_threshold
+    ).astype(np.int8)
+    point_estimates = {
+        "balanced_accuracy": balanced_accuracy_score(
+            y_true,
+            candidate_prediction,
+        )
+        - balanced_accuracy_score(y_true, reference_prediction),
+        "macro_f1": f1_score(
+            y_true,
+            candidate_prediction,
+            average="macro",
+            zero_division=0,
+        )
+        - f1_score(
+            y_true,
+            reference_prediction,
+            average="macro",
+            zero_division=0,
+        ),
+        "roc_auc": roc_auc_score(y_true, candidate_probability)
+        - roc_auc_score(y_true, reference_probability),
+    }
+
+    rng = np.random.default_rng(seed)
+    benign = np.flatnonzero(y_true == 0)
+    malware = np.flatnonzero(y_true == 1)
+    samples = defaultdict(list)
+    for _ in range(N_BOOTSTRAP):
+        indices = np.r_[
+            rng.choice(benign, size=len(benign), replace=True),
+            rng.choice(malware, size=len(malware), replace=True),
+        ]
+        y_sample = y_true[indices]
+        candidate_sample = candidate_prediction[indices]
+        reference_sample = reference_prediction[indices]
+        samples["balanced_accuracy"].append(
+            balanced_accuracy_score(y_sample, candidate_sample)
+            - balanced_accuracy_score(y_sample, reference_sample)
+        )
+        samples["macro_f1"].append(
+            f1_score(
+                y_sample,
+                candidate_sample,
+                average="macro",
+                zero_division=0,
+            )
+            - f1_score(
+                y_sample,
+                reference_sample,
+                average="macro",
+                zero_division=0,
+            )
+        )
+        samples["roc_auc"].append(
+            roc_auc_score(y_sample, candidate_probability[indices])
+            - roc_auc_score(y_sample, reference_probability[indices])
+        )
+
+    result = {}
+    for metric, point_estimate in point_estimates.items():
+        low, high = np.quantile(samples[metric], [0.025, 0.975])
+        result[f"{metric}_difference"] = float(point_estimate)
+        result[f"{metric}_difference_ci_low"] = float(low)
+        result[f"{metric}_difference_ci_high"] = float(high)
+    return result
