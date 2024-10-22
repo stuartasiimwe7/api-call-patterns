@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.py[cod]
+
+# Source data are documented but not redistributed.
+data/raw/
+
+# Manuscript generation and local LaTeX tooling are intentionally outside
+# the experiment repository's tracked deliverables.
+paper/
+tools/
+src/build_manuscript.py

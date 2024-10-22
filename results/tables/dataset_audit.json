@@ -1,0 +1,13 @@
+{
+  "raw_rows": 43876,
+  "raw_benign": 1079,
+  "raw_malware": 42797,
+  "unique_sequence_groups": 13206,
+  "duplicate_sequence_groups": 2239,
+  "duplicate_extra_rows": 30670,
+  "conflicting_sequence_groups": 15,
+  "conflicting_rows": 1641,
+  "clean_unique_rows": 13191,
+  "clean_benign": 609,
+  "clean_malware": 12582
+}
