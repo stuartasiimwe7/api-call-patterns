@@ -254,11 +254,11 @@ The results are derived from 1 public sandbox dataset and may not transfer direc
 The source data contain no timestamps, so elapsed detection time cannot be estimated. Call count measures how much of a trace the model has observed. The reported false-alarm rate applies to individual traces in this dataset, rather than to hosts or days in a deployed system.
 
 \section{Discussion}
-The first question concerns how detection changes as more calls become available. Useful evidence is present before all 100 calls are observed, and detection quality improves substantially by 20 calls. Performance is not monotonic, however, because each checkpoint uses an independently fitted model and validation-selected threshold.
+Useful behavioural evidence accumulates early in a trace, but additional calls do not guarantee better classification. The fluctuations between checkpoints show that prefix length, model fitting, and threshold selection interact. A deployment should therefore validate each intended decision point instead of assuming that waiting for more calls will improve performance.
 
-The second question concerns the value of local call order. Local-order features improve on normalised call frequencies at every tested budget. As a supplementary comparison, modelling longer-range dependencies produces a higher macro F1 at 20 calls, but no consistent further gain across the tested prefixes.
+The consistent advantage of local-order features indicates that adjacent call transitions carry information that normalised call counts discard. The recurrent comparison shows that greater sequence capacity alone is insufficient: it provides a narrow improvement at 20 calls but no reliable advantage across the full range of prefixes.
 
-The third question concerns alert timing under a false-alarm constraint. The selected policy delays an alert until 3 consecutive checkpoints are positive; among detected malware, the median alert occurs at 60 calls. A competing policy alerts earlier but produces a 16.3\% benign false-alarm rate. Earlier alerts are useful only when their false-alarm cost remains controlled.
+The sequential results expose the practical tradeoff between alert speed and false alarms. Requiring 3 consecutive positive checkpoints delays many alerts, yet it gives substantially better false-alarm control than the earlier recurrent alerts. This tradeoff matters because even a small per-trace error can create a large review burden when many benign programs are monitored.
 
 \begin{figure}[H]
  \centering
@@ -268,7 +268,7 @@ The third question concerns alert timing under a false-alarm constraint. The sel
 \end{figure}
 
 \section{Conclusion}
-The results answer the 3 research questions. First, partial traces contain useful evidence by 20 calls, although performance does not improve monotonically with prefix length. Second, local call order improves on call frequency at every checkpoint. A supplementary recurrent comparison adds no consistent further gain. Third, the selected sequential policy detects 71.9\% of malicious traces by 60 calls and 83.6\% by 100 calls, with a 5.4\% benign false-alarm rate. Early detection is therefore feasible within this dataset, but alert timing must be assessed together with false alarms.
+Partial Windows API-call sequences can support malware detection before a complete trace is available. Local call order improves on call frequency at every checkpoint, and the selected sequential policy detects 83.6\% of malicious traces by 100 calls with a 5.4\% benign false-alarm rate. These results support early detection within this dataset while showing that alert speed must be considered together with false alarms.
 
 In future work, I plan to evaluate chronologically collected traces, hold out complete malware families, and include more benign samples. I also want to work with data that retain repeated calls and timestamps, then compare alternative recurrent and transformer architectures across multiple training seeds using the same deduplication, validation, and held-out test procedure.
 
