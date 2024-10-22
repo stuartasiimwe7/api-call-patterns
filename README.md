@@ -46,6 +46,7 @@ Generated figures, tables, predictions, and fitted models are written to `result
 
 ```text
 data/               Dataset instructions and local source data
+paper/              Manuscript PDF, LaTeX source, and watermark assets
 results/figures/    Evaluation figures
 results/models/     Fitted models for each call budget
 results/tables/     Metrics, predictions, and audit records
