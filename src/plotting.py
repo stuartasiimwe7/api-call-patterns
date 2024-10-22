@@ -14,21 +14,20 @@ from sklearn.metrics import (
 
 from .config import FIGURES
 
+MODEL_COLOURS = {
+    "Frequency": "#d62728",
+    "LSTM": "#2ca02c",
+    "Order-aware 1-2 gram": "#1f77b4",
+}
+CURVE_COLOURS = {
+    10: "#d62728",
+    20: "#2ca02c",
+    40: "#1f77b4",
+    100: "#000000",
+}
 
-def save_figures(
-    results: pd.DataFrame,
-    policy: pd.DataFrame,
-    predictions: dict,
-    y_test: np.ndarray,
-    audit: dict,
-):
-    sns.set_theme(style="whitegrid", context="paper", font_scale=1.15)
-    palette = {
-        "Frequency": "#64748b",
-        "Order-aware 1-2 gram": "#0f8ebd",
-        "LSTM": "#7c3aed",
-    }
 
+def save_prefix_performance(results: pd.DataFrame) -> None:
     fig, axes = plt.subplots(1, 2, figsize=(11, 4.2), constrained_layout=True)
     for model_name, group in results.groupby("model"):
         axes[0].errorbar(
@@ -36,14 +35,16 @@ def save_figures(
             group["balanced_accuracy"],
             yerr=np.vstack(
                 [
-                    group["balanced_accuracy"] - group["balanced_accuracy_ci_low"],
-                    group["balanced_accuracy_ci_high"] - group["balanced_accuracy"],
+                    group["balanced_accuracy"]
+                    - group["balanced_accuracy_ci_low"],
+                    group["balanced_accuracy_ci_high"]
+                    - group["balanced_accuracy"],
                 ]
             ),
             marker="o",
             capsize=3,
             label=model_name,
-            color=palette[model_name],
+            color=MODEL_COLOURS[model_name],
         )
         axes[1].errorbar(
             group["prefix_calls"],
@@ -57,7 +58,7 @@ def save_figures(
             marker="o",
             capsize=3,
             label=model_name,
-            color=palette[model_name],
+            color=MODEL_COLOURS[model_name],
         )
     axes[0].set(
         title="Balanced accuracy by observed API calls",
@@ -76,6 +77,56 @@ def save_figures(
     fig.savefig(FIGURES / "prefix_performance.png", dpi=300, bbox_inches="tight")
     fig.savefig(FIGURES / "prefix_performance.pdf", bbox_inches="tight")
     plt.close(fig)
+
+
+def save_roc_pr_curves(predictions: dict, y_test: np.ndarray) -> None:
+    fig, axes = plt.subplots(1, 2, figsize=(10.5, 4.2), constrained_layout=True)
+    for prefix in [10, 20, 40, 100]:
+        probability = predictions[f"Order-aware 1-2 gram|{prefix}"]["test"]
+        colour = CURVE_COLOURS[prefix]
+        fpr, tpr, _ = roc_curve(y_test, probability)
+        auc = roc_auc_score(y_test, probability)
+        axes[0].plot(
+            fpr,
+            tpr,
+            color=colour,
+            label=f"{prefix} calls (AUC {auc:.3f})",
+        )
+        precision, recall, _ = precision_recall_curve(1 - y_test, 1 - probability)
+        average_precision = average_precision_score(1 - y_test, 1 - probability)
+        axes[1].plot(
+            recall,
+            precision,
+            color=colour,
+            label=f"{prefix} calls (AP {average_precision:.3f})",
+        )
+    axes[0].plot([0, 1], [0, 1], linestyle="--", color="#94a3b8", linewidth=1)
+    axes[0].set(
+        title="ROC curves",
+        xlabel="False-positive rate",
+        ylabel="True-positive rate",
+    )
+    axes[1].set(
+        title="Benign-class precision-recall",
+        xlabel="Benign recall",
+        ylabel="Benign precision",
+    )
+    for ax in axes:
+        ax.legend(frameon=False, fontsize=8)
+    fig.savefig(FIGURES / "roc_pr_curves.png", dpi=300, bbox_inches="tight")
+    fig.savefig(FIGURES / "roc_pr_curves.pdf", bbox_inches="tight")
+    plt.close(fig)
+
+
+def save_figures(
+    results: pd.DataFrame,
+    policy: pd.DataFrame,
+    predictions: dict,
+    y_test: np.ndarray,
+    audit: dict,
+):
+    sns.set_theme(style="whitegrid", context="paper", font_scale=1.15)
+    save_prefix_performance(results)
 
     fig, ax = plt.subplots(figsize=(6.2, 4.4), constrained_layout=True)
     ax.plot(
@@ -103,31 +154,7 @@ def save_figures(
     fig.savefig(FIGURES / "early_detection_policy.pdf", bbox_inches="tight")
     plt.close(fig)
 
-    fig, axes = plt.subplots(1, 2, figsize=(10.5, 4.2), constrained_layout=True)
-    for prefix in [10, 20, 40, 100]:
-        probability = predictions[f"Order-aware 1-2 gram|{prefix}"]["test"]
-        fpr, tpr, _ = roc_curve(y_test, probability)
-        auc = roc_auc_score(y_test, probability)
-        axes[0].plot(fpr, tpr, label=f"{prefix} calls (AUC {auc:.3f})")
-        precision, recall, _ = precision_recall_curve(1 - y_test, 1 - probability)
-        average_precision = average_precision_score(1 - y_test, 1 - probability)
-        axes[1].plot(
-            recall,
-            precision,
-            label=f"{prefix} calls (AP {average_precision:.3f})",
-        )
-    axes[0].plot([0, 1], [0, 1], linestyle="--", color="#94a3b8", linewidth=1)
-    axes[0].set(title="ROC curves", xlabel="False-positive rate", ylabel="True-positive rate")
-    axes[1].set(
-        title="Benign-class precision-recall",
-        xlabel="Benign recall",
-        ylabel="Benign precision",
-    )
-    for ax in axes:
-        ax.legend(frameon=False, fontsize=8)
-    fig.savefig(FIGURES / "roc_pr_curves.png", dpi=300, bbox_inches="tight")
-    fig.savefig(FIGURES / "roc_pr_curves.pdf", bbox_inches="tight")
-    plt.close(fig)
+    save_roc_pr_curves(predictions, y_test)
 
     order_aware_results = results.query("model == 'Order-aware 1-2 gram'")
     reaches_target = (order_aware_results["balanced_accuracy"] >= 0.85).any()

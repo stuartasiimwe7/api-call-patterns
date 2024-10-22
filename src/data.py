@@ -11,7 +11,8 @@ from .config import DATA, SEED, TABLES
 
 
 def sequence_fingerprint(row: np.ndarray) -> str:
-    return hashlib.sha256(row.astype(np.int16).tobytes()).hexdigest()
+    encoded = row.astype("<i2", copy=False).tobytes()
+    return hashlib.sha256(encoded).hexdigest()
 
 
 def load_and_audit() -> tuple[np.ndarray, np.ndarray, pd.DataFrame, dict]:

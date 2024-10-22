@@ -31,6 +31,8 @@
 \setlength{\parindent}{1em}
 \setlength{\parskip}{0pt}
 \setlength{\columnsep}{0.24in}
+\setcounter{dbltopnumber}{3}
+\renewcommand{\dbltopfraction}{0.95}
 \hyphenpenalty=10000
 \exhyphenpenalty=10000
 \emergencystretch=1.5em
@@ -87,10 +89,12 @@ The analysis uses the public \emph{Malware Analysis Datasets: API Call Sequences
 
 For a sequence $x_i=(a_{i,1},\ldots,a_{i,100})$, an exact fingerprint is computed as
 \begin{equation}
- h_i=\operatorname{SHA256}(a_{i,1}\Vert\cdots\Vert a_{i,100}),
+ h_i=\operatorname{SHA256}\!\left(
+ \operatorname{LE16}(a_{i,1})\Vert\cdots\Vert
+ \operatorname{LE16}(a_{i,100})\right),
  \label{eq:hash}
 \end{equation}
-where $\Vert$ denotes deterministic concatenation. The audit identifies 13,206 distinct fingerprints and 30,670 rows that duplicate another complete sequence. 15 fingerprint groups, covering 1,641 rows, contain both labels. These groups are removed because the available data cannot establish the correct label, and 1 row is retained from each remaining group. This process yields 13,191 unique traces: 12,582 malware and 609 benign.
+where $\operatorname{LE16}$ encodes each identifier as a signed 16-bit little-endian integer and $\Vert$ denotes byte concatenation. The audit identifies 13,206 distinct fingerprints and 30,670 rows that duplicate another complete sequence. 15 fingerprint groups, covering 1,641 rows, contain both labels. These groups are removed because the available data cannot establish the correct label, and 1 row is retained from each remaining group. This process yields 13,191 unique traces: 12,582 malware and 609 benign.
 
 The cleaned data remain strongly imbalanced. Class weights are computed from the training partition as
 \begin{equation}
@@ -118,8 +122,8 @@ The frequency baseline represents API identifier $j$ by its normalised count:
 \end{equation}
 This records which calls occurred while discarding their order. The order-aware model uses the feature multiset
 \begin{equation}
- \phi(x_i^{(k)})=\{a_{i,t}\}_{t=1}^{k}\cup
- \{(a_{i,t},a_{i,t+1})\}_{t=1}^{k-1},
+ \phi(x_i^{(k)})=\{\!\{a_{i,t}\}\!\}_{t=1}^{k}\uplus
+ \{\!\{(a_{i,t},a_{i,t+1})\}\!\}_{t=1}^{k-1},
  \label{eq:ngrams}
 \end{equation}
 This multiset is mapped to a deterministic 32,768-dimensional sparse vector by feature hashing and then normalised to unit $L_2$ length. Let $\mathbf{z}_i^{(k)}$ denote the frequency vector in Eq.~\eqref{eq:frequency} for the baseline or the hashed vector derived from Eq.~\eqref{eq:ngrams} for the order-aware model.
@@ -137,26 +141,28 @@ The recurrent model maps each API identifier to a 24-dimensional learned embeddi
  \begin{aligned}
   \mathbf{e}_t&=\mathbf{E}[a_{i,t}],\\
   (\mathbf{h}_t,\mathbf{c}_t)&=\operatorname{LSTM}(\mathbf{e}_t,\mathbf{h}_{t-1},\mathbf{c}_{t-1}),\\
-  \hat p_i^{(k)}&=\sigma(\mathbf{v}^{\top}\mathbf{h}_k+b).
+  \hat p_i^{(k)}&=\sigma\!\left(\mathbf{v}^{\top}
+  \mathcal{D}_{0.2}(\mathbf{h}_k)+b\right).
  \end{aligned}
  \label{eq:lstm}
 \end{equation}
-The model uses 0.2 dropout, class-weighted binary cross-entropy, Adam with a learning rate of 0.001, batches of 256, and gradient clipping at 1.0. Training runs for at most 25 epochs in PyTorch 2.5.1 \cite{paszke2019}. The validation macro F1 selects the epoch, with balanced accuracy breaking ties, and training stops after 5 epochs without improvement.
+Here, $\mathcal{D}_{0.2}$ is dropout with probability 0.2 during training and the identity function during evaluation. The model uses class-weighted binary cross-entropy, Adam with a learning rate of 0.001, batches of 256, and gradient clipping at 1.0. Training runs for at most 25 epochs in PyTorch 2.5.1 \cite{paszke2019}. The validation macro F1 selects the epoch, with balanced accuracy breaking ties, and training stops after 5 epochs without improvement.
 
 \subsection{Alert Thresholds}
 For each checkpoint and candidate false-positive limit $\alpha\in\mathcal{A}=\{0,0.01,0.02,0.05\}$, the validation threshold maximises malware true-positive rate subject to that limit:
 \begin{equation}
- \tau_{k,\alpha}^*=\arg\max_{\tau}\operatorname{TPR}_{\rm val}(\tau)
+ \tau_{k,\alpha}^*=\arg\max_{\tau\in\mathcal{T}_k}
+ \operatorname{TPR}_{\rm val}(\tau)
  \quad\text{s.t.}\quad \operatorname{FPR}_{\rm val}(\tau)\leq\alpha.
  \label{eq:threshold}
 \end{equation}
-Continuous-monitoring candidates require $r\in\{1,2,3\}$ consecutive positive checkpoints. An alert at checkpoint $k_j$ occurs when
+where $\mathcal{T}_k$ contains 0, 1, and the validation probabilities at checkpoint $k$. Ties are resolved by validation macro F1 and then by the higher threshold. Continuous-monitoring candidates require $r\in\{1,2,3\}$ consecutive positive checkpoints. For $j\geq r-1$, the alert indicator at checkpoint $k_j$ is
 \begin{equation}
  A_i(k_j;r,\alpha)=\prod_{q=0}^{r-1}
- \mathbb{I}\!\left(\hat p_i^{(k_{j-q})}\geq\tau_{k_{j-q},\alpha}^*\right)=1.
+ \mathbb{I}\!\left(\hat p_i^{(k_{j-q})}\geq\tau_{k_{j-q},\alpha}^*\right).
  \label{eq:alert}
 \end{equation}
-The pair $(r^*,\alpha^*)$ is selected separately for each model to maximise malware coverage while keeping the cumulative validation false-alarm rate at or below 5\%. The order-aware model selects $(3,0.05)$, while the LSTM selects $(1,0.02)$. Both policies are applied unchanged to the test set.
+An alert occurs when $A_i(k_j;r,\alpha)=1$. The pair $(r^*,\alpha^*)$ is selected separately for each model to maximise malware coverage while keeping the cumulative validation false-alarm rate at or below 5\%. Ties favour the lower cumulative false-alarm rate and then the earlier median alert. The order-aware model selects $(3,0.05)$, while the LSTM selects $(1,0.02)$. Both policies are applied unchanged to the test set.
 
 \subsection{Metrics}
 Because 95.4\% of cleaned observations are malware, accuracy alone is misleading. Balanced accuracy is
@@ -168,9 +174,7 @@ Macro F1 is the unweighted mean of the malware and benign F1 scores. Reported me
 
 \section{Results}
 \subsection{Prefix Classification}
-The order-aware representation outperforms the frequency baseline at every checkpoint (Table~\ref{tab:prefix}). At 20 calls it reaches 0.818 balanced accuracy (95\% CI 0.785-0.847) and 0.919 ROC-AUC (95\% CI 0.894-0.939). The LSTM reaches 0.826 balanced accuracy and 0.925 ROC-AUC at the same checkpoint.
-
-Paired bootstrap comparisons show that the LSTM raises macro F1 by 0.051 at 20 calls (95\% CI 0.038-0.064), but its balanced-accuracy difference of 0.008 includes zero. At 40 calls, its balanced accuracy is 0.061 lower (95\% CI 0.029-0.093 lower). The order-aware model also performs significantly better at 80 and 100 calls. At 60 calls, the LSTM's balanced-accuracy difference is uncertain, while its macro F1 is 0.031 lower (95\% CI 0.009-0.053 lower).
+Table~\ref{tab:prefix} reports balanced accuracy and ROC-AUC at each checkpoint. The order-aware representation has higher balanced accuracy than the frequency baseline at all 7 checkpoints. The LSTM has higher balanced accuracy at 10, 20, and 60 calls, while the order-aware model is higher at 5, 40, 80, and 100 calls. The highest values for both reported measures occur with the order-aware model at 80 calls: 0.904 balanced accuracy and 0.965 ROC-AUC.
 
 \begin{table*}[t]
 \centering
@@ -192,6 +196,8 @@ Calls & Frequency BAcc & Order BAcc & LSTM BAcc & Order AUC & LSTM AUC\\
 \end{tabular}
 \end{table*}
 
+The paired bootstrap analysis supplements Table~\ref{tab:prefix} with uncertainty for differences between the LSTM and order-aware model. At 20 calls, the LSTM raises macro F1 by 0.051 (95\% CI 0.038-0.064), while its 0.008 balanced-accuracy difference includes zero. Its balanced accuracy is lower by 0.061 at 40 calls, 0.042 at 80 calls, and 0.083 at 100 calls; all 3 confidence intervals exclude zero. At 60 calls, the balanced-accuracy difference is uncertain, while the LSTM macro F1 is 0.031 lower (95\% CI 0.009-0.053 lower).
+
 \begin{figure*}[t]
  \centering
  \includegraphics[width=0.82\textwidth]{../results/figures/prefix_performance.pdf}
@@ -199,11 +205,11 @@ Calls & Frequency BAcc & Order BAcc & LSTM BAcc & Order AUC & LSTM AUC\\
  \label{fig:prefix}
 \end{figure*}
 
-Performance is not monotonic across checkpoints. Each prefix model is fitted independently, and each operating threshold is selected on a small benign validation subset. The order-aware 80-call model produced the highest test balanced accuracy, but this does not establish a monotonic relationship between prefix length and performance.
+The order-aware balanced accuracy rises from 0.586 at 5 calls to 0.870 at 40 calls, falls to 0.853 at 60 calls, peaks at 0.904 at 80 calls, and reaches 0.897 at 100 calls. Each checkpoint uses a separately fitted model and validation-selected threshold. The values therefore compare specific decision points; they do not measure the effect of adding calls to one fixed detector.
 
 \begin{figure*}[t]
  \centering
- \includegraphics[width=0.86\textwidth]{../results/figures/roc_pr_curves.pdf}
+ \includegraphics[width=0.76\textwidth]{../results/figures/roc_pr_curves.pdf}
  \caption{ROC and benign-class precision-recall curves for the order-aware model at selected checkpoints.}
  \label{fig:curves}
 \end{figure*}
@@ -245,7 +251,7 @@ A conventional stratified 80/20 row split of the original data causes 73.7\% of 
 Exact duplicate removal prevents direct sequence leakage, but near-duplicate variants may remain. Family labels are unavailable, so related malware samples may still occur in different partitions.
 
 \subsubsection{Model Constraints}
-Feature hashing can produce collisions. The unigram-bigram representation captures only local call order, and the linear classifier cannot model longer dependencies directly. The LSTM can represent longer dependencies, but its additional capacity does not improve performance consistently and its alert thresholds generalise poorly. Threshold selection for both models relies on a limited benign validation sample.
+Feature hashing maps unigram and bigram features into 32,768 positions. Different features can be assigned to the same position, causing their counts to be combined and preventing the classifier from distinguishing them. The unigram-bigram representation captures only local call order, and the linear classifier cannot model longer dependencies directly. The LSTM can represent longer dependencies, but its additional capacity does not improve performance consistently and its alert thresholds generalise poorly. Threshold selection for both models relies on a limited benign validation sample.
 
 \subsubsection{Generalisability}
 The results are derived from 1 public sandbox dataset and may not transfer directly to other operating systems, sandbox configurations, or deployment environments. Because the dataset lacks collection dates and malware-family labels, chronological and family-held-out evaluation is not possible.
@@ -254,7 +260,7 @@ The results are derived from 1 public sandbox dataset and may not transfer direc
 The source data contain no timestamps, so elapsed detection time cannot be estimated. Call count measures how much of a trace the model has observed. The reported false-alarm rate applies to individual traces in this dataset, rather than to hosts or days in a deployed system.
 
 \section{Discussion}
-Useful behavioural evidence accumulates early in a trace, but additional calls do not guarantee better classification. The fluctuations between checkpoints show that prefix length, model fitting, and threshold selection interact. A deployment should therefore validate each intended decision point instead of assuming that waiting for more calls will improve performance.
+Useful behavioural evidence appears early in a trace: the order-aware model reaches 0.818 balanced accuracy after 20 calls. This supports making decisions from partial traces rather than waiting for all 100 calls. Because the dataset records call order without timestamps, the result describes earlier detection by observed calls rather than by elapsed time.
 
 The consistent advantage of local-order features indicates that adjacent call transitions carry information that normalised call counts discard. The recurrent comparison shows that greater sequence capacity alone is insufficient: it provides a narrow improvement at 20 calls but no reliable advantage across the full range of prefixes.
 
