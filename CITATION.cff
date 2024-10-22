@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "If you use this manuscript, code, or results, please cite it as below. Cite the source dataset separately."
+title: "Temporal Analysis of API Call Patterns for Early Detection of Malicious Behaviour"
+type: software
+authors:
+  - family-names: Asiimwe
+    given-names: Stuart
+date-released: 2024-10-22
+abstract: "A reproducible evaluation of early malware detection from partial Windows API-call sequences."
+keywords:
+  - malware detection
+  - API-call sequences
+  - temporal analysis
+  - dynamic malware analysis
+  - behavioural analysis
+  - early detection
