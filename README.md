@@ -10,14 +10,16 @@ Call-frequency, local-order, and recurrent representations are compared to answe
 
 ## Results
 
-- 13,191 unique labelled traces after removing exact duplicates and conflicting labels
-- 0.818 balanced accuracy and 0.919 ROC-AUC after 20 calls
-- 0.904 balanced accuracy after 80 calls
-- 83.6% malware detection by 100 calls with a 5.4% benign false-alarm rate
-- Median alert at 60 calls among detected malware
-- Longer-range sequence modelling did not improve performance consistently and produced a higher sequential false-alarm rate
+| Result | Value | Scope |
+| --- | --- | --- |
+| Audited dataset | 13,191 unique labelled traces | After removing exact duplicate sequences and groups with conflicting labels |
+| Classification after 20 calls | 0.818 balanced accuracy; 0.919 ROC-AUC | Order-aware unigram-bigram model |
+| Highest observed balanced accuracy | 0.904 after 80 calls | Order-aware unigram-bigram model across the 7 predefined checkpoints |
+| Sequential detection by 100 calls | 83.6% malware coverage; 5.4% benign false-alarm rate | Validation-selected order-aware policy |
+| Detection timing | Median alert at 60 calls | Calculated among detected malicious test traces |
+| Recurrent comparison | Higher macro F1 at 20 calls; no consistent gain across checkpoints | Its sequential policy detected earlier but produced a 16.3% benign false-alarm rate |
 
-Hyperparameters and alert thresholds are selected on the validation set. The test set is reserved for final evaluation.
+Hyperparameters and alert thresholds are selected on the validation set. The test set is reserved for final evaluation. These values are held-out estimates for this dataset and are not deployment results.
 
 ## Dataset
 
@@ -83,3 +85,11 @@ When using the dataset, also cite its original source:
   year = {2019}
 }
 ```
+
+## License
+
+The experiment code is available under the [MIT License](LICENSE). The manuscript remains copyright Stuart Asiimwe & Hanyang University. The source dataset is not redistributed and remains subject to its source terms.
+
+## Archive note
+
+This repository is a reconstructed archive of research conducted in October 2024.

@@ -2,6 +2,9 @@ cff-version: 1.2.0
 message: "If you use this manuscript, code, or results, please cite it as below. Cite the source dataset separately."
 title: "Temporal Analysis of API Call Patterns for Early Detection of Malicious Behaviour"
 type: software
+license: MIT
+repository-code: "https://github.com/stuartasiimwe7/api-call-patterns"
+url: "https://github.com/stuartasiimwe7/api-call-patterns"
 authors:
   - name: Stuart Asiimwe
 date-released: 2024-10-22
